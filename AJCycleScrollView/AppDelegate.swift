@@ -2,7 +2,7 @@
 //  AppDelegate.swift
 //  AJCycleScrollView
 //
-//  Created by 潘安静 on 2017/6/17.
+//  Created by 潘安静 on 2017/6/10.
 //  Copyright © 2017年 anjing. All rights reserved.
 //
 

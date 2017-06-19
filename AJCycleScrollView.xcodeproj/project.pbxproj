@@ -14,6 +14,8 @@
 		9535D52F1EF560EB0097D2B5 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9535D52D1EF560EB0097D2B5 /* LaunchScreen.storyboard */; };
 		9535D53A1EF560EB0097D2B5 /* AJCycleScrollViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9535D5391EF560EB0097D2B5 /* AJCycleScrollViewTests.swift */; };
 		9535D5451EF560EC0097D2B5 /* AJCycleScrollViewUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9535D5441EF560EC0097D2B5 /* AJCycleScrollViewUITests.swift */; };
+		9535D5551EF563850097D2B5 /* AJCycleScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9535D5541EF563850097D2B5 /* AJCycleScrollView.swift */; };
+		9535D5571EF58ED70097D2B5 /* AJCycleCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9535D5561EF58ED70097D2B5 /* AJCycleCollectionViewCell.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,6 +49,8 @@
 		9535D5401EF560EC0097D2B5 /* AJCycleScrollViewUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AJCycleScrollViewUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9535D5441EF560EC0097D2B5 /* AJCycleScrollViewUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AJCycleScrollViewUITests.swift; sourceTree = "<group>"; };
 		9535D5461EF560EC0097D2B5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9535D5541EF563850097D2B5 /* AJCycleScrollView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = AJCycleScrollView.swift; path = ../AJCycleScrollView.swift; sourceTree = "<group>"; };
+		9535D5561EF58ED70097D2B5 /* AJCycleCollectionViewCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = AJCycleCollectionViewCell.swift; path = ../AJCycleCollectionViewCell.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -74,6 +78,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		045FC8B21EF7C98A0092A0DF /* Lib */ = {
+			isa = PBXGroup;
+			children = (
+				9535D5541EF563850097D2B5 /* AJCycleScrollView.swift */,
+				9535D5561EF58ED70097D2B5 /* AJCycleCollectionViewCell.swift */,
+			);
+			path = Lib;
+			sourceTree = "<group>";
+		};
 		9535D5181EF560EB0097D2B5 = {
 			isa = PBXGroup;
 			children = (
@@ -97,6 +110,7 @@
 		9535D5231EF560EB0097D2B5 /* AJCycleScrollView */ = {
 			isa = PBXGroup;
 			children = (
+				045FC8B21EF7C98A0092A0DF /* Lib */,
 				9535D5241EF560EB0097D2B5 /* AppDelegate.swift */,
 				9535D5261EF560EB0097D2B5 /* ViewController.swift */,
 				9535D5281EF560EB0097D2B5 /* Main.storyboard */,
@@ -262,8 +276,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9535D5571EF58ED70097D2B5 /* AJCycleCollectionViewCell.swift in Sources */,
 				9535D5271EF560EB0097D2B5 /* ViewController.swift in Sources */,
 				9535D5251EF560EB0097D2B5 /* AppDelegate.swift in Sources */,
+				9535D5551EF563850097D2B5 /* AJCycleScrollView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -514,6 +530,7 @@
 				9535D54B1EF560EC0097D2B5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		9535D54C1EF560EC0097D2B5 /* Build configuration list for PBXNativeTarget "AJCycleScrollViewTests" */ = {
 			isa = XCConfigurationList;
@@ -522,6 +539,7 @@
 				9535D54E1EF560EC0097D2B5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		9535D54F1EF560EC0097D2B5 /* Build configuration list for PBXNativeTarget "AJCycleScrollViewUITests" */ = {
 			isa = XCConfigurationList;
@@ -530,6 +548,7 @@
 				9535D5511EF560EC0097D2B5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
