@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import Kingfisher
 
 //pageControl 位置枚举
 public enum PageControlPosition {
@@ -140,7 +141,7 @@ class AJCycleScrollView: UIView {
     open var textBackgroundColor : UIColor = UIColor.black.withAlphaComponent(0.4)
     
     //图片数组
-    open var imageArray : Array<UIImage> = []{
+    open var imageArray : Array<NSObject> = []{
         didSet {
             cycleCollectionView.reloadData()
             if isCirculation == true {
@@ -167,7 +168,7 @@ class AJCycleScrollView: UIView {
     //collectionView重用标志符
     let kCycleCollectionViewCell = "cycleCollectionViewCell";
     
-    fileprivate var cycleImageArray : Array<UIImage> = []                       //循环轮播的图片数组，将原先图片数组在首尾添加最后一张和第一张图片
+    fileprivate var cycleImageArray : Array<NSObject> = []                       //循环轮播的图片数组，将原先图片数组在首尾添加最后一张和第一张图片
     fileprivate var cycleTextArray : Array<String> = []                         //循环轮播文字数组
     fileprivate var cycleCollectionView : UICollectionView!
     fileprivate var cycleCollectionFlowLayout : UICollectionViewFlowLayout!
@@ -234,7 +235,11 @@ class AJCycleScrollView: UIView {
         
         //使用屏幕刷新率计时，原先frameInterval在 iOS10上取消，因此采用新提供的preferredFramesPerSecond 只能做到每秒计时，因此添加 count 来帮助计时
         timer = CADisplayLink.init(target: self, selector: #selector(scrollNext))
-        timer?.preferredFramesPerSecond =  1
+        if #available(iOS 10.0, *) {
+            timer?.preferredFramesPerSecond =  1
+        } else {
+            timer?.frameInterval = 60
+        }
         timer?.add(to: RunLoop.current, forMode: .defaultRunLoopMode)
     }
     
@@ -290,10 +295,34 @@ extension AJCycleScrollView : UICollectionViewDelegate,UICollectionViewDataSourc
         switch cycleViewType! {
         case CycleScrollViewType.onlyImage :
             cell.type = .onlyImage
-            cell.imageView.image = isCirculation == true ? cycleImageArray[indexPath.row] : imageArray[indexPath.row]
+            
+            let imagePath = isCirculation == true ? cycleImageArray[indexPath.row] : imageArray[indexPath.row]
+            
+            if imagePath is String {
+                if (imagePath as! String) .hasPrefix("http") || (imagePath as! String).hasPrefix("https") {
+//                    cell.imageView.kf_setImageWithURL(NSURL(String : imagePath as! String))
+                    cell.imageView.kf.setImage(with: URL(string: imagePath as! String))
+                }else{
+                    cell.imageView.image = UIImage.init(named: imagePath as! String)
+                }
+            }else if imagePath is UIImage {
+                cell.imageView.image = (imagePath as! UIImage)
+            }
         case CycleScrollViewType.imageWithText :
             cell.type = .imageWithText
-            cell.imageView.image = isCirculation == true ? cycleImageArray[indexPath.row] : imageArray[indexPath.row]
+//            cell.imageView.image = isCirculation == true ? cycleImageArray[indexPath.row] : imageArray[indexPath.row]
+            let imagePath = isCirculation == true ? cycleImageArray[indexPath.row] : imageArray[indexPath.row]
+            
+            if imagePath is String {
+                if (imagePath as! String) .hasPrefix("http") || (imagePath as! String).hasPrefix("https") {
+//                    cell.imageView.kf_setImageWithURL(NSURL(String : imagePath as! String))
+                    cell.imageView.kf.setImage(with: URL(string: imagePath as! String))
+                }else{
+                    cell.imageView.image = UIImage.init(named: imagePath as! String)
+                }
+            }else if imagePath is UIImage {
+                cell.imageView.image = (imagePath as! UIImage)
+            }
             cell.textLabel.text = isCirculation == true ? cycleTextArray[indexPath.row] : textArray[indexPath.row]
             cell.textLabel.frame = CGRect.init(x: cell.textLabel.frame.origin.x, y: cell.textLabel.frame.origin.y, width: self.frame.size.width - pageControl.frame.size.width, height: cell.textLabel.frame.size.height)
             
