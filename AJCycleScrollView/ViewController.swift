@@ -20,8 +20,13 @@ class ViewController: UIViewController {
         
         let view : AJCycleScrollView = AJCycleScrollView.init(frame: CGRect.init(x: 0, y: 20, width: UIScreen.main.bounds.size.width, height: 180))
         view.imageArray = imageArray
+        view.autoScrollTimeInterval = 2
         view.cycleViewType = CycleScrollViewType.imageWithText
         view.textArray = textArray
+        view.isCirculation = false
+        view.didSelectItemAtIndexPath = {(indexpath : NSInteger) in
+            print(indexpath)
+        }
         self.view.addSubview(view)
         
         
@@ -34,6 +39,7 @@ class ViewController: UIViewController {
         view2.cycleViewType = CycleScrollViewType.onlyText
         view2.textArray = textArray
         view2.textFont = UIFont.systemFont(ofSize: 16)
+        view2.scrollDirection = UICollectionViewScrollDirection.vertical
         self.view.addSubview(view2)
     }
 

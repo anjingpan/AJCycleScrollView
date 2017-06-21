@@ -8,12 +8,14 @@
 
 import UIKit
 
+//pageControl 位置枚举
 public enum PageControlPosition {
     case center
     case left
     case right
 }
 
+//轮播图类型枚举
 public enum CycleScrollViewType {
     case onlyImage
     case imageWithText
@@ -26,17 +28,12 @@ public typealias didSelectItemAtIndexpathClosure = (NSInteger) -> Void
 
 class AJCycleScrollView: UIView {
 
-    /*
-    // Only override draw() if you perform custom drawing.
-    // An empty implementation adversely affects performance during animation.
-    override func draw(_ rect: CGRect) {
-        // Drawing code
-    }
-    */
     
+    // MARK: - open 变量
     //轮播图类型
     open var cycleViewType : CycleScrollViewType? = .onlyImage{
         didSet {
+            //文本和图片共存时，默认 pageControl在右下角
             if cycleViewType == CycleScrollViewType.imageWithText {
                 pageControlPosition = .right
             }
@@ -47,14 +44,19 @@ class AJCycleScrollView: UIView {
     //是否自动滚动
     open var isAutoScroll : Bool? = true{
         didSet {
-            timer?.invalidate()
-            timer = nil
+            if isAutoScroll == false {
+                self.invalidateTimer()
+            }
         }
     }
     
     //是否循环滚动
     open var isCirculation : Bool? = true{
         didSet {
+            //如果不循环轮播，不用将其自动移动到第二页，因为循环轮播在最前面添加了最后页
+            if isCirculation == false {
+                cycleCollectionView.contentOffset = CGPoint.init(x: 0, y: 0)
+            }
             cycleCollectionView.reloadData()
         }
     }
@@ -62,18 +64,19 @@ class AJCycleScrollView: UIView {
     //滚动方向
     open var scrollDirection : UICollectionViewScrollDirection? = .horizontal{
         didSet {
-            
+            cycleCollectionFlowLayout.scrollDirection = scrollDirection!
+            if isCirculation == true {
+                cycleCollectionView.contentOffset = scrollDirection == UICollectionViewScrollDirection.horizontal ? CGPoint.init(x: self.frame.size.width, y: cycleCollectionView.contentOffset.y) : CGPoint.init(x: cycleCollectionView.contentOffset.x, y: self.frame.size.height)
+            }
         }
     }
     
     
     //自动滚动时间间隔
-    open var autoScrollTimeInterval : Double = 3.0 {
+    open var autoScrollTimeInterval : NSInteger = 4 {
         didSet {
-            timer?.invalidate()
-            timer = nil
-            timer = Timer.scheduledTimer(timeInterval: autoScrollTimeInterval, target: self, selector: #selector(scrollNext), userInfo: nil, repeats: true)
-            RunLoop.main.add(timer!, forMode: .commonModes)
+            self.invalidateTimer()
+            self.setupTimer()
         }
     }
     
@@ -112,6 +115,7 @@ class AJCycleScrollView: UIView {
         }
     }
     
+    //pageControl高度
     open var pageControlHeight : CGFloat = 20 {
         didSet {
             switch pageControlPosition {
@@ -139,6 +143,9 @@ class AJCycleScrollView: UIView {
     open var imageArray : Array<UIImage> = []{
         didSet {
             cycleCollectionView.reloadData()
+            if isCirculation == true {
+                cycleCollectionView.contentOffset = scrollDirection == UICollectionViewScrollDirection.horizontal ? CGPoint.init(x: self.frame.size.width, y: cycleCollectionView.contentOffset.y) : CGPoint.init(x: cycleCollectionView.contentOffset.x, y: self.frame.size.height)
+            }
         }
     }
     
@@ -146,24 +153,34 @@ class AJCycleScrollView: UIView {
     open var textArray : Array<String> = []{
         didSet{
             cycleCollectionView.reloadData()
+            if isCirculation == true {
+                cycleCollectionView.contentOffset = scrollDirection == UICollectionViewScrollDirection.horizontal ? CGPoint.init(x: self.frame.size.width, y: cycleCollectionView.contentOffset.y) : CGPoint.init(x: cycleCollectionView.contentOffset.x, y: self.frame.size.height)
+            }
         }
     }
     
     //点击轮播闭包属性
     open var didSelectItemAtIndexPath : didSelectItemAtIndexpathClosure?
     
+
+    // MARK: - 私有变量
+    //collectionView重用标志符
     let kCycleCollectionViewCell = "cycleCollectionViewCell";
     
+    fileprivate var cycleImageArray : Array<UIImage> = []                       //循环轮播的图片数组，将原先图片数组在首尾添加最后一张和第一张图片
+    fileprivate var cycleTextArray : Array<String> = []                         //循环轮播文字数组
     fileprivate var cycleCollectionView : UICollectionView!
     fileprivate var cycleCollectionFlowLayout : UICollectionViewFlowLayout!
     fileprivate var pageControl : UIPageControl!
-    fileprivate var currentIndexpath : NSInteger = 0
-    fileprivate var totalIndexpath : NSInteger = 1
+    fileprivate var currentIndexpath : NSInteger = 0                            //当前页
+    fileprivate var totalIndexpath : NSInteger = 1                              //总页数，循环轮播为图片数组长度加2
     
-    fileprivate var timer : Timer?
+    //fileprivate var timer : Timer?
+    fileprivate var timer : CADisplayLink?                                      //计时器
+    fileprivate var count : NSInteger = 0                                       //通过 count 来协助计时，因为现在每秒调用触发函数
     
     
-    
+    // MARK: - InitView
     override init(frame: CGRect) {
         super.init(frame: frame)
         self.initCollectionView()
@@ -191,8 +208,8 @@ class AJCycleScrollView: UIView {
         self.addSubview(cycleCollectionView)
         
         if isAutoScroll == true {
-            timer = Timer.scheduledTimer(timeInterval: autoScrollTimeInterval, target: self, selector: #selector(scrollNext), userInfo: nil, repeats: true)
-            RunLoop.main.add(timer!, forMode: .commonModes)
+            self.setupTimer()
+            
         }
         
     }
@@ -209,11 +226,45 @@ class AJCycleScrollView: UIView {
         
     }
     
+    
+    // MARK: - Timer
+    func setupTimer() {
+//        timer = Timer.scheduledTimer(timeInterval: autoScrollTimeInterval, target: self, selector: #selector(scrollNext), userInfo: nil, repeats: true)
+//        RunLoop.main.add(timer!, forMode: .commonModes)
+        
+        //使用屏幕刷新率计时，原先frameInterval在 iOS10上取消，因此采用新提供的preferredFramesPerSecond 只能做到每秒计时，因此添加 count 来帮助计时
+        timer = CADisplayLink.init(target: self, selector: #selector(scrollNext))
+        timer?.preferredFramesPerSecond =  1
+        timer?.add(to: RunLoop.current, forMode: .defaultRunLoopMode)
+    }
+    
+    func invalidateTimer() {
+        timer?.invalidate()
+        timer = nil
+    }
 
 }
 
+
+// MARK: - CollectionView Delegate && DataSource
 extension AJCycleScrollView : UICollectionViewDelegate,UICollectionViewDataSource{
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        if imageArray.count != 0 {
+            if isCirculation == true  && cycleImageArray.count != imageArray.count + 2 {
+                cycleImageArray = imageArray
+                cycleImageArray.append(imageArray.first!)
+                cycleImageArray.insert(imageArray.last!, at: 0)
+            }
+        }
+        
+        if textArray.count != 0 {
+            if isCirculation == true && cycleTextArray.count != textArray.count + 2{
+                cycleTextArray = textArray
+                cycleTextArray.append(textArray.first!)
+                cycleTextArray.insert(textArray.last!, at: 0)
+            }
+        }
+        
         if  cycleViewType == CycleScrollViewType.onlyText{
             totalIndexpath = textArray.count
         }else{
@@ -222,7 +273,8 @@ extension AJCycleScrollView : UICollectionViewDelegate,UICollectionViewDataSourc
         pageControl.numberOfPages = totalIndexpath
         
         if isCirculation == true {
-            totalIndexpath = totalIndexpath * 100
+            //循环轮播在首尾各加了一张图
+            totalIndexpath = totalIndexpath + 2
         }
         
         return totalIndexpath
@@ -238,11 +290,11 @@ extension AJCycleScrollView : UICollectionViewDelegate,UICollectionViewDataSourc
         switch cycleViewType! {
         case CycleScrollViewType.onlyImage :
             cell.type = .onlyImage
-            cell.imageView.image = imageArray[indexPath.row % imageArray.count]
+            cell.imageView.image = isCirculation == true ? cycleImageArray[indexPath.row] : imageArray[indexPath.row]
         case CycleScrollViewType.imageWithText :
             cell.type = .imageWithText
-            cell.imageView.image = imageArray[indexPath.row % imageArray.count]
-            cell.textLabel.text = textArray[indexPath.row % textArray.count]
+            cell.imageView.image = isCirculation == true ? cycleImageArray[indexPath.row] : imageArray[indexPath.row]
+            cell.textLabel.text = isCirculation == true ? cycleTextArray[indexPath.row] : textArray[indexPath.row]
             cell.textLabel.frame = CGRect.init(x: cell.textLabel.frame.origin.x, y: cell.textLabel.frame.origin.y, width: self.frame.size.width - pageControl.frame.size.width, height: cell.textLabel.frame.size.height)
             
             //根据文本自适应高度
@@ -252,7 +304,7 @@ extension AJCycleScrollView : UICollectionViewDelegate,UICollectionViewDataSourc
             
         case CycleScrollViewType.onlyText :
             cell.type = .onlyText
-            cell.textLabel.text = textArray[indexPath.row % textArray.count]
+            cell.textLabel.text = isCirculation == true ? cycleTextArray[indexPath.row] : textArray[indexPath.row]
         }
         
         
@@ -262,15 +314,11 @@ extension AJCycleScrollView : UICollectionViewDelegate,UICollectionViewDataSourc
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         if didSelectItemAtIndexPath != nil {
             
-            //循环轮播
-            if isCirculation == true {
-                didSelectItemAtIndexPath!(currentIndexpath % (totalIndexpath / 100))
-            }
-            
             didSelectItemAtIndexPath!(currentIndexpath)
         }
     }
     
+    //文本自适应高度
     func adjustHeightForLabel(label: UILabel) {
         label.numberOfLines = 0
         let paragraphStyle : NSMutableParagraphStyle = NSMutableParagraphStyle.init()
@@ -283,53 +331,90 @@ extension AJCycleScrollView : UICollectionViewDelegate,UICollectionViewDataSourc
     
 }
 
-
+// MARK: - ScrollView Delegate
 extension AJCycleScrollView : UIScrollViewDelegate{
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         if isAutoScroll == true {
-            timer?.invalidate()
-            timer = nil
+            count = 0
+            self.invalidateTimer()
         }
     }
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if isAutoScroll == true {
-            timer = Timer.scheduledTimer(timeInterval: autoScrollTimeInterval, target: self, selector: #selector(scrollNext), userInfo: nil, repeats: true)
-            RunLoop.main.add(timer!, forMode: .commonModes)
+            count = 0
+            self.setupTimer()
         }
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        
+        let nextIndexpath = isCirculation == true ? currentIndexpath + 2 : currentIndexpath + 1
         if scrollDirection == UICollectionViewScrollDirection.horizontal {
-            if scrollView.contentOffset.x >= CGFloat(currentIndexpath + 1) * self.frame.size.width {
-                currentIndexpath = currentIndexpath + 1
+            
+            
+            if scrollView.contentOffset.x >= CGFloat(nextIndexpath) * self.frame.size.width {
+                currentIndexpath += 1
+                
+                if isCirculation == true && currentIndexpath == totalIndexpath - 2 {
+                    self.currentIndexpath = 0
+                    scrollView.contentOffset = CGPoint.init(x: self.frame.size.width, y: scrollView.contentOffset.y)
+                }
             }
-            if scrollView.contentOffset.x <= CGFloat(currentIndexpath - 1) * self.frame.size.width {
-                currentIndexpath = currentIndexpath - 1
+            
+            let lastIndexpath = isCirculation == true ? currentIndexpath : currentIndexpath - 1
+            
+            if scrollView.contentOffset.x <= CGFloat(lastIndexpath) * self.frame.size.width {
+                currentIndexpath -= 1
+                
+                if isCirculation == true && currentIndexpath == -1 {
+                    self.currentIndexpath = totalIndexpath - 3
+                    scrollView.contentOffset = CGPoint.init(x: CGFloat(currentIndexpath + 1) * self.frame.size.width, y: scrollView.contentOffset.y)
+                }
             }
         }else{
-            if scrollView.contentOffset.y >= CGFloat(currentIndexpath + 1) * self.frame.size.height {
-                currentIndexpath = currentIndexpath + 1
+            if scrollView.contentOffset.y >= CGFloat(nextIndexpath) * self.frame.size.height {
+                currentIndexpath += 1
+                
+                if isCirculation == true && currentIndexpath == totalIndexpath - 2 {
+                    self.currentIndexpath = 0
+                    scrollView.contentOffset = CGPoint.init(x: scrollView.contentOffset.x , y: self.frame.size.height)
+                }
             }
-            if scrollView.contentOffset.x <= CGFloat(currentIndexpath - 1) * self.frame.size.height {
-                currentIndexpath = currentIndexpath - 1
+            
+            let lastIndexpath = isCirculation == true ? currentIndexpath : currentIndexpath - 1
+            
+            if scrollView.contentOffset.y <= CGFloat(lastIndexpath) * self.frame.size.height {
+                currentIndexpath -= 1
+                
+                if isCirculation == true && currentIndexpath == -1 {
+                    self.currentIndexpath = totalIndexpath - 3
+                    scrollView.contentOffset = CGPoint.init(x: scrollView.contentOffset.x, y:  CGFloat(currentIndexpath + 1) * self.frame.size.height)
+                }
             }
         }
         
-        if isCirculation == true {
-            pageControl.currentPage = currentIndexpath % (totalIndexpath / 100)
-        }else{
-            pageControl.currentPage = currentIndexpath
-        }
+        pageControl.currentPage = currentIndexpath
     }
     
     func scrollNext() {
-        currentIndexpath = currentIndexpath + 1
-        
-        if scrollDirection == UICollectionViewScrollDirection.horizontal {
-            cycleCollectionView.setContentOffset(CGPoint.init(x: CGFloat(currentIndexpath) * self.frame.size.width, y: cycleCollectionView.contentOffset.y), animated: true)
-        }else{
-            cycleCollectionView.setContentOffset(CGPoint.init(x: cycleCollectionView.contentOffset.x , y: CGFloat(currentIndexpath) * self.frame.size.width), animated: true)
+        //count 为了计时所用
+        count += 1
+        if count >= autoScrollTimeInterval {
+            //循环轮播在最前面添加了一张末尾图所以加2
+            let nextIndexpath = isCirculation == true ? currentIndexpath + 2 : currentIndexpath + 1
+            
+            //防止不循环轮播时，在最后一页滚动到空白处
+            if isCirculation == false && currentIndexpath >= totalIndexpath - 1{
+                return
+            }
+            
+            if scrollDirection == UICollectionViewScrollDirection.horizontal {
+                cycleCollectionView.setContentOffset(CGPoint.init(x: CGFloat(nextIndexpath) * self.frame.size.width, y: cycleCollectionView.contentOffset.y), animated: true)
+            }else{
+                cycleCollectionView.setContentOffset(CGPoint.init(x: cycleCollectionView.contentOffset.x , y: CGFloat(nextIndexpath) * self.frame.size.height), animated: true)
+            }
+            count = 0
         }
     }
 }
